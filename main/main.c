@@ -31,7 +31,7 @@
 #include "ethernet_init.h"
 #include "sdkconfig.h"
 
-#define ACTIVE_ETHERNET             0
+#define ACTIVE_ETHERNET             1
 #define TAG                         "app_main"
 
 /* FreeRTOS event group to signal when we are connected*/
@@ -81,8 +81,8 @@ static void eth_event_handler(void *arg, esp_event_base_t event_base,
 
 
         sprintf(clientID, "dev_%02x_%02x_%02x_%02x_%02x_%02x",
-                mac_address[0], mac_address[1], mac_address[2],
-                mac_address[3], mac_address[4], mac_address[5]);
+                mac_addr[0], mac_addr[1], mac_addr[2],
+                mac_addr[3], mac_addr[4], mac_addr[5]);
         sprintf(sub_topic, "%s/command", clientID);
 
         ESP_LOGI(TAG, "ClientID: %s", clientID);                 

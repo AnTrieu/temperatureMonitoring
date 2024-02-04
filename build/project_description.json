@@ -1,7 +1,7 @@
 {
     "version":            "1",
     "project_name":       "temperature_monitoring",
-    "project_version":    "d573ca0-dirty",
+    "project_version":    "3baad24-dirty",
     "project_path":       "E:/Cty/Private/temperatureMonitoring",
     "idf_path":           "D:/esp/esp-idf",
     "build_dir":          "E:/Cty/Private/temperatureMonitoring/build",
