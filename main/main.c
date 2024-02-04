@@ -31,7 +31,7 @@
 #include "ethernet_init.h"
 #include "sdkconfig.h"
 
-#define ACTIVE_ETHERNET             1
+#define ACTIVE_ETHERNET             0
 #define TAG                         "app_main"
 
 /* FreeRTOS event group to signal when we are connected*/
@@ -192,7 +192,7 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
         int percentage = (content_raw * 100) / content_length;
         ESP_LOGI(TAG, "HTTP_EVENT_ON_DATA, len=%d, progress=%d%%", evt->data_len, percentage);
 
-        if ((percentage - percentageK1) >= 10)
+        if (((percentage - percentageK1) >= 10) && ((percentage - percentageK1) < 100))
         {
             // Publish data to register device
             char payload[128] = {0};
