@@ -58,6 +58,9 @@ E:/Cty/Private/temperatureMonitoring/build/esp-idf/json/libjson.a
 E:/Cty/Private/temperatureMonitoring/build/esp-idf/mqtt/libmqtt.a
 E:/Cty/Private/temperatureMonitoring/build/esp-idf/perfmon/libperfmon.a
 E:/Cty/Private/temperatureMonitoring/build/esp-idf/spiffs/libspiffs.a
+E:/Cty/Private/temperatureMonitoring/build/esp-idf/touch_element/libtouch_element.a
+E:/Cty/Private/temperatureMonitoring/build/esp-idf/ulp/libulp.a
+E:/Cty/Private/temperatureMonitoring/build/esp-idf/usb/libusb.a
 E:/Cty/Private/temperatureMonitoring/build/esp-idf/wifi_provisioning/libwifi_provisioning.a
 E:/Cty/Private/temperatureMonitoring/build/esp-idf/main/libmain.a
 E:/Cty/Private/temperatureMonitoring/build/esp-idf/ethernet_init/libethernet_init.a

@@ -1,2 +1,5 @@
-idf_component_register(SRCS "ethernet_example_main.c"
+idf_component_register(SRCS "main.c"
                        INCLUDE_DIRS ".")
+
+ # requirements can't depend on config
+set(COMPONENT_REQUIRES json)
