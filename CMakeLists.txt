@@ -3,4 +3,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(ethernet_basic)
+project(temperature_monitoring)
+
+target_add_binary_data(${CMAKE_PROJECT_NAME}.elf "main/mqtt_ca_certificate.pem" TEXT)
+target_add_binary_data(${CMAKE_PROJECT_NAME}.elf "main/http_certificate.pem" TEXT)

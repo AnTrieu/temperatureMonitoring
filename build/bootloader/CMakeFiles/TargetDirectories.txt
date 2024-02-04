@@ -10,6 +10,9 @@ E:/Cty/Private/temperatureMonitoring/build/bootloader/CMakeFiles/bootloader.elf.
 E:/Cty/Private/temperatureMonitoring/build/bootloader/CMakeFiles/size.dir
 E:/Cty/Private/temperatureMonitoring/build/bootloader/CMakeFiles/size-files.dir
 E:/Cty/Private/temperatureMonitoring/build/bootloader/CMakeFiles/size-components.dir
+E:/Cty/Private/temperatureMonitoring/build/bootloader/CMakeFiles/dfu.dir
+E:/Cty/Private/temperatureMonitoring/build/bootloader/CMakeFiles/dfu-list.dir
+E:/Cty/Private/temperatureMonitoring/build/bootloader/CMakeFiles/dfu-flash.dir
 E:/Cty/Private/temperatureMonitoring/build/bootloader/CMakeFiles/uf2-app.dir
 E:/Cty/Private/temperatureMonitoring/build/bootloader/CMakeFiles/uf2.dir
 E:/Cty/Private/temperatureMonitoring/build/bootloader/CMakeFiles/edit_cache.dir
@@ -55,8 +58,8 @@ E:/Cty/Private/temperatureMonitoring/build/bootloader/esp-idf/esp_system/CMakeFi
 E:/Cty/Private/temperatureMonitoring/build/bootloader/esp-idf/esp_hw_support/CMakeFiles/__idf_esp_hw_support.dir
 E:/Cty/Private/temperatureMonitoring/build/bootloader/esp-idf/esp_hw_support/CMakeFiles/edit_cache.dir
 E:/Cty/Private/temperatureMonitoring/build/bootloader/esp-idf/esp_hw_support/CMakeFiles/rebuild_cache.dir
-E:/Cty/Private/temperatureMonitoring/build/bootloader/esp-idf/esp_hw_support/port/esp32/CMakeFiles/edit_cache.dir
-E:/Cty/Private/temperatureMonitoring/build/bootloader/esp-idf/esp_hw_support/port/esp32/CMakeFiles/rebuild_cache.dir
+E:/Cty/Private/temperatureMonitoring/build/bootloader/esp-idf/esp_hw_support/port/esp32s3/CMakeFiles/edit_cache.dir
+E:/Cty/Private/temperatureMonitoring/build/bootloader/esp-idf/esp_hw_support/port/esp32s3/CMakeFiles/rebuild_cache.dir
 E:/Cty/Private/temperatureMonitoring/build/bootloader/esp-idf/esp_common/CMakeFiles/__idf_esp_common.dir
 E:/Cty/Private/temperatureMonitoring/build/bootloader/esp-idf/esp_common/CMakeFiles/edit_cache.dir
 E:/Cty/Private/temperatureMonitoring/build/bootloader/esp-idf/esp_common/CMakeFiles/rebuild_cache.dir
