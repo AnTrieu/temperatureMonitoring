@@ -1,4 +1,4 @@
-/* * Data converted from E:/Cty/Private/temperatureMonitoring/build/esp-idf/mbedtls/x509_crt_bundle
+/* * Data converted from D:/0.Studio_Android/AndroidStudioProjects/temperatureMonitoring/build/esp-idf/mbedtls/x509_crt_bundle
  */
 .data
 .section .rodata.embedded

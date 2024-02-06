@@ -31,7 +31,20 @@
 #include "ethernet_init.h"
 #include "sdkconfig.h"
 
-#define ACTIVE_ETHERNET             0
+#include "driver/uart.h"
+#include "driver/gpio.h"
+#define ECHO_TEST_TXD 17
+#define ECHO_TEST_RXD 16
+#define ECHO_TEST_RTS (UART_PIN_NO_CHANGE)
+#define ECHO_TEST_CTS (UART_PIN_NO_CHANGE)
+
+#define ECHO_UART_PORT_NUM      2
+#define ECHO_UART_BAUD_RATE     9600
+#define ECHO_TASK_STACK_SIZE    10000
+
+#define BUF_SIZE (128)
+
+#define ACTIVE_ETHERNET             1
 #define TAG                         "app_main"
 
 /* FreeRTOS event group to signal when we are connected*/
@@ -39,6 +52,8 @@ static EventGroupHandle_t           event_group;
 static char                         clientID[64];
 static char                         sub_topic[128];
 static esp_mqtt_client_handle_t     client = NULL;
+
+static uint8_t  strSend[28] ={'D','A','T','A',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}; //
 
 extern const uint8_t mqtt_ca_certificate_pem_start[]    asm("_binary_mqtt_ca_certificate_pem_start");
 extern const uint8_t http_certificate_pem_start[]       asm("_binary_http_certificate_pem_start");
@@ -52,14 +67,33 @@ extern const uint8_t http_certificate_pem_start[]       asm("_binary_http_certif
 #define MQTT_SUBSCRIBED_BIT         BIT3
 #define REGISTER_DONE_BIT           BIT4
 
+uint16_t ModbusRTU_CRC(uint8_t raw_msg_data_byte[], uint8_t iLen)
+{
+  //Tinh CRC
+  uint16_t crc = 0xFFFF;
+  for (int pos = 0; pos < iLen; pos++) {
+    crc ^= (uint16_t)raw_msg_data_byte[pos];
+    for (int i = 8; i != 0; i--) {    // Loop over each bit
+      if ((crc & 0x0001) != 0) {      // If the LSB is set
+        crc >>= 1;                    // Shift right and XOR 0xA001
+        crc ^= 0xA001;
+      }
+      else                            // Else LSB is not set
+        crc >>= 1;                    // Just shift right
+    }
+  }
+  crc = ((crc << 8) & 0xff00) | ((crc >> 8) & 0x00ff);
+  return crc;
+}
+
 #if !ACTIVE_ETHERNET
 /* The examples use WiFi configuration that you can set via project configuration menu
 
    If you'd rather not, just change the below entries to strings with
    the config you want - ie #define EXAMPLE_WIFI_SSID "mywifissid"
 */
-#define EXAMPLE_ESP_WIFI_SSID      "Quoc An"
-#define EXAMPLE_ESP_WIFI_PASS      "0902301580"
+#define EXAMPLE_ESP_WIFI_SSID      "TOANTRUNG_KHACH"
+#define EXAMPLE_ESP_WIFI_PASS      "manhinhled.net.vn"
 #define EXAMPLE_ESP_MAXIMUM_RETRY  5
 #endif
 
@@ -262,12 +296,26 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
             if (strcmp(command->valuestring, "get_data") == 0)
             {
                 // Publish data to register device
-                char payload[128] = {0};
+                char payload[256] = {0};
 
                 // TODO: dummy data
-                float temperature = 30.12f;
+                //float temperature = 30.13f;
+                ESP_LOGI(TAG, "%02x_%02x_%02x_%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x", strSend[0],strSend[1],strSend[2],strSend[3],strSend[4],strSend[5],strSend[6],strSend[7],strSend[8],strSend[9],strSend[10],strSend[11],strSend[12],strSend[13],strSend[14],strSend[15],strSend[16],strSend[17],strSend[18],strSend[19],strSend[20],strSend[21],strSend[22],strSend[23],strSend[24],strSend[25],strSend[26],strSend[27]);
+                uint16_t *data_raw = (uint16_t *)strSend;
 
-                sprintf(payload, "{\"Type\":\"Response\",\"clientID\":\"%s\",\"raw_data\":\"%.2f\"}", clientID, temperature);
+                sprintf(payload, "{\"Type\":\"Response\",\"clientID\":\"%s\",\"raw_data\":[%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d]}",
+                        clientID,
+                        data_raw[0],
+                        data_raw[1],
+                        data_raw[2],
+                        data_raw[3],
+                        data_raw[4],
+                        data_raw[5],
+                        data_raw[6],
+                        data_raw[7],
+                        data_raw[8],
+                        data_raw[9],
+                        data_raw[10]);
                 ESP_LOGI(TAG, "sent publish successful, msg_id=%d", esp_mqtt_client_publish(client, "data_topic", payload, strlen(payload), 0, 0));                
             }
             else if (strcmp(command->valuestring, "register_done") == 0)
@@ -428,6 +476,64 @@ static void main_task(void *pvParameter)
     vTaskDelete(NULL);
 }
 
+static void echo_task(void *arg)
+{
+    /* Configure parameters of an UART driver,
+     * communication pins and install the driver */
+    uart_config_t uart_config = {
+        .baud_rate = ECHO_UART_BAUD_RATE,
+        .data_bits = UART_DATA_8_BITS,
+        .parity    = UART_PARITY_DISABLE,
+        .stop_bits = UART_STOP_BITS_1,
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+        .source_clk = UART_SCLK_DEFAULT,
+    };
+
+    ESP_ERROR_CHECK(uart_driver_install(ECHO_UART_PORT_NUM, BUF_SIZE * 2, 0, 0, NULL, ESP_INTR_FLAG_IRAM));
+    ESP_ERROR_CHECK(uart_param_config(ECHO_UART_PORT_NUM, &uart_config));
+    ESP_ERROR_CHECK(uart_set_pin(ECHO_UART_PORT_NUM, ECHO_TEST_TXD, ECHO_TEST_RXD, ECHO_TEST_RTS, ECHO_TEST_CTS));
+
+    // Configure a temporary buffer for the incoming data
+    uint8_t *data = (uint8_t *) malloc(BUF_SIZE);
+    //uint8_t iIdUart=0;
+    uint8_t bSend[8]={0,3,0,0,0,1,0,0};
+    uint16_t len=0;
+    while (1) {
+        if(++bSend[0]>11) bSend[0]=1;
+        uint8_t iId;
+        uint16_t ix= ModbusRTU_CRC(bSend,6);
+        bSend[6]= ix/256;
+        bSend[7]= ix%256;
+        uart_write_bytes(ECHO_UART_PORT_NUM, (const char *)bSend, 8); 
+        //ESP_LOGI(TAG, "ModbusRTU_CRC: %04X", ix);
+        len = uart_read_bytes(ECHO_UART_PORT_NUM, data, (BUF_SIZE - 1), 50 / portTICK_PERIOD_MS);
+        //Check CRC
+        if(len==7)
+        {
+            len=data[5]*256+data[6];
+            ix= ModbusRTU_CRC(data,5);
+            if(ix==len){
+                //DATAxx
+                //ESP_LOGI(TAG, "CRC OK");
+                iId=4+(data[0]-1)*2;
+                if(iId>3 && iId<25)
+                {
+                    strSend[iId]=data[4];
+                    strSend[iId+1]=data[3];
+                    ix = ModbusRTU_CRC(strSend,26);
+                    strSend[26]=ix/256;
+                    strSend[27]=ix%256;
+                    //ESP_LOGI(TAG, "%02x_%02x_%02x_%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x", strSend[0],strSend[1],strSend[2],strSend[3],strSend[4],strSend[5],strSend[6],strSend[7],strSend[8],strSend[9],strSend[10],strSend[11],strSend[12],strSend[13],strSend[14],strSend[15],strSend[16],strSend[17],strSend[18],strSend[19],strSend[20],strSend[21],strSend[22],strSend[23],strSend[24],strSend[25],strSend[26],strSend[27]);
+                }
+                else ESP_LOGI(TAG, "Error ID.");
+            }
+            //ESP_LOGI(TAG, "CRC1-2: %d%d",len,ix);
+        }
+        vTaskDelay(100 / portTICK_PERIOD_MS); // 100ms
+    }
+    vTaskDelete(NULL);
+}
+
 void app_main(void)
 {
     // Initialize NVS.
@@ -516,6 +622,8 @@ void app_main(void)
                         pdFALSE,
                         portMAX_DELAY);
 
-    xTaskCreate(&main_task, "main_task", 1024 * 20, NULL, 5, NULL);
-    vTaskDelete(NULL);  
+    xTaskCreatePinnedToCore(&main_task, "main_task", 1024 * 20, NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore(&echo_task, "echo_task", 1024 * 10, NULL, 10, NULL, 1);
+
+    vTaskDelete(NULL);     
 }

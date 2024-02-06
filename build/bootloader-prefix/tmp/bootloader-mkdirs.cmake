@@ -4,19 +4,19 @@
 cmake_minimum_required(VERSION 3.5)
 
 file(MAKE_DIRECTORY
-  "D:/esp/esp-idf/components/bootloader/subproject"
-  "E:/Cty/Private/temperatureMonitoring/build/bootloader"
-  "E:/Cty/Private/temperatureMonitoring/build/bootloader-prefix"
-  "E:/Cty/Private/temperatureMonitoring/build/bootloader-prefix/tmp"
-  "E:/Cty/Private/temperatureMonitoring/build/bootloader-prefix/src/bootloader-stamp"
-  "E:/Cty/Private/temperatureMonitoring/build/bootloader-prefix/src"
-  "E:/Cty/Private/temperatureMonitoring/build/bootloader-prefix/src/bootloader-stamp"
+  "C:/Users/hgkq/esp/v5.1.2/esp-idf/components/bootloader/subproject"
+  "D:/0.Studio_Android/AndroidStudioProjects/temperatureMonitoring/build/bootloader"
+  "D:/0.Studio_Android/AndroidStudioProjects/temperatureMonitoring/build/bootloader-prefix"
+  "D:/0.Studio_Android/AndroidStudioProjects/temperatureMonitoring/build/bootloader-prefix/tmp"
+  "D:/0.Studio_Android/AndroidStudioProjects/temperatureMonitoring/build/bootloader-prefix/src/bootloader-stamp"
+  "D:/0.Studio_Android/AndroidStudioProjects/temperatureMonitoring/build/bootloader-prefix/src"
+  "D:/0.Studio_Android/AndroidStudioProjects/temperatureMonitoring/build/bootloader-prefix/src/bootloader-stamp"
 )
 
 set(configSubDirs )
 foreach(subDir IN LISTS configSubDirs)
-    file(MAKE_DIRECTORY "E:/Cty/Private/temperatureMonitoring/build/bootloader-prefix/src/bootloader-stamp/${subDir}")
+    file(MAKE_DIRECTORY "D:/0.Studio_Android/AndroidStudioProjects/temperatureMonitoring/build/bootloader-prefix/src/bootloader-stamp/${subDir}")
 endforeach()
 if(cfgdir)
-  file(MAKE_DIRECTORY "E:/Cty/Private/temperatureMonitoring/build/bootloader-prefix/src/bootloader-stamp${cfgdir}") # cfgdir has leading slash
+  file(MAKE_DIRECTORY "D:/0.Studio_Android/AndroidStudioProjects/temperatureMonitoring/build/bootloader-prefix/src/bootloader-stamp${cfgdir}") # cfgdir has leading slash
 endif()

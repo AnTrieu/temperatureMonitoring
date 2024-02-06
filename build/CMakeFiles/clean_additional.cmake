@@ -18,7 +18,7 @@ if("${CONFIG}" STREQUAL "" OR "${CONFIG}" STREQUAL "")
   "ldgen_libraries"
   "ldgen_libraries.in"
   "mqtt_ca_certificate.pem.S"
-  "project_elf_src_esp32s3.c"
+  "project_elf_src_esp32.c"
   "temperature_monitoring.bin"
   "temperature_monitoring.map"
   "x509_crt_bundle.S"
