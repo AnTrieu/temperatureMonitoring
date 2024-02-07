@@ -33,6 +33,7 @@
 
 #include "driver/uart.h"
 #include "driver/gpio.h"
+
 #define ECHO_TEST_TXD 17
 #define ECHO_TEST_RXD 16
 #define ECHO_TEST_RTS (UART_PIN_NO_CHANGE)
@@ -41,8 +42,10 @@
 #define ECHO_UART_PORT_NUM      2
 #define ECHO_UART_BAUD_RATE     9600
 #define ECHO_TASK_STACK_SIZE    10000
-
 #define BUF_SIZE (128)
+
+#define LED_GPIO   21
+#define SW_GPIO    4
 
 #define ACTIVE_ETHERNET             1
 #define TAG                         "app_main"
@@ -53,7 +56,9 @@ static char                         clientID[64];
 static char                         sub_topic[128];
 static esp_mqtt_client_handle_t     client = NULL;
 
-static uint8_t  strSend[28] ={'D','A','T','A',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}; //
+static uint8_t  strSend[26] ={'D','A','T','A',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}; //
+static uint8_t  iWConnect[11]={0,0,0,0,0,0,0,0,0,0,0};
+static uint8_t iLedStatus=0,iTime=0;
 
 extern const uint8_t mqtt_ca_certificate_pem_start[]    asm("_binary_mqtt_ca_certificate_pem_start");
 extern const uint8_t http_certificate_pem_start[]       asm("_binary_http_certificate_pem_start");
@@ -281,6 +286,8 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         break;
     case MQTT_EVENT_UNSUBSCRIBED:
         ESP_LOGI(TAG, "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", event->msg_id);
+        xEventGroupClearBits(event_group, WIFI_CONNECTED_BIT);
+        xEventGroupSetBits(event_group, WIFI_FAIL_BIT);
         break;
     case MQTT_EVENT_PUBLISHED:
         ESP_LOGI(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
@@ -300,7 +307,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 
                 // TODO: dummy data
                 //float temperature = 30.13f;
-                ESP_LOGI(TAG, "%02x_%02x_%02x_%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x", strSend[0],strSend[1],strSend[2],strSend[3],strSend[4],strSend[5],strSend[6],strSend[7],strSend[8],strSend[9],strSend[10],strSend[11],strSend[12],strSend[13],strSend[14],strSend[15],strSend[16],strSend[17],strSend[18],strSend[19],strSend[20],strSend[21],strSend[22],strSend[23],strSend[24],strSend[25],strSend[26],strSend[27]);
+                ESP_LOGI(TAG, "%02x_%02x_%02x_%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x", strSend[0],strSend[1],strSend[2],strSend[3],strSend[4],strSend[5],strSend[6],strSend[7],strSend[8],strSend[9],strSend[10],strSend[11],strSend[12],strSend[13],strSend[14],strSend[15],strSend[16],strSend[17],strSend[18],strSend[19],strSend[20],strSend[21],strSend[22],strSend[23],strSend[24],strSend[25]);
                 uint16_t *data_raw = (uint16_t *)strSend;
 
                 sprintf(payload, "{\"Type\":\"Response\",\"clientID\":\"%s\",\"raw_data\":[%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d]}",
@@ -478,6 +485,16 @@ static void main_task(void *pvParameter)
 
 static void echo_task(void *arg)
 {
+    //Khai bao GPIO SW va LED
+    esp_rom_gpio_pad_select_gpio(LED_GPIO);
+    esp_rom_gpio_pad_select_gpio(SW_GPIO);
+    /* Set the GPIO as a push/pull output */
+    gpio_set_direction(LED_GPIO, GPIO_MODE_OUTPUT);
+    gpio_set_direction(SW_GPIO, GPIO_MODE_INPUT);
+    gpio_set_pull_mode(SW_GPIO, GPIO_PULLUP_ONLY);
+    uint8_t btState=0,cout1=0,cout2=0,en_senxor=0;
+
+
     /* Configure parameters of an UART driver,
      * communication pins and install the driver */
     uart_config_t uart_config = {
@@ -498,38 +515,82 @@ static void echo_task(void *arg)
     //uint8_t iIdUart=0;
     uint8_t bSend[8]={0,3,0,0,0,1,0,0};
     uint16_t len=0;
+    uint8_t iId=0,iZ=0;
+    uint16_t ix;
+    
     while (1) {
-        if(++bSend[0]>11) bSend[0]=1;
-        uint8_t iId;
-        uint16_t ix= ModbusRTU_CRC(bSend,6);
+        if(++iId>11) iId=1;
+        bSend[0]=iId;        
+        ix= ModbusRTU_CRC(bSend,6);
         bSend[6]= ix/256;
         bSend[7]= ix%256;
         uart_write_bytes(ECHO_UART_PORT_NUM, (const char *)bSend, 8); 
-        //ESP_LOGI(TAG, "ModbusRTU_CRC: %04X", ix);
+        ++iWConnect[iId-1];
         len = uart_read_bytes(ECHO_UART_PORT_NUM, data, (BUF_SIZE - 1), 50 / portTICK_PERIOD_MS);
         //Check CRC
         if(len==7)
-        {
+        {           
             len=data[5]*256+data[6];
             ix= ModbusRTU_CRC(data,5);
             if(ix==len){
                 //DATAxx
                 //ESP_LOGI(TAG, "CRC OK");
-                iId=4+(data[0]-1)*2;
-                if(iId>3 && iId<25)
+                iZ=4+(data[0]-1)*2;
+                if(iZ>3 && iZ<25)
                 {
-                    strSend[iId]=data[4];
-                    strSend[iId+1]=data[3];
-                    ix = ModbusRTU_CRC(strSend,26);
-                    strSend[26]=ix/256;
-                    strSend[27]=ix%256;
-                    //ESP_LOGI(TAG, "%02x_%02x_%02x_%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x", strSend[0],strSend[1],strSend[2],strSend[3],strSend[4],strSend[5],strSend[6],strSend[7],strSend[8],strSend[9],strSend[10],strSend[11],strSend[12],strSend[13],strSend[14],strSend[15],strSend[16],strSend[17],strSend[18],strSend[19],strSend[20],strSend[21],strSend[22],strSend[23],strSend[24],strSend[25],strSend[26],strSend[27]);
+                    strSend[iZ]=data[4];
+                    strSend[iZ+1]=data[3];
+                    iWConnect[iId-1]=0;
+                    //ESP_LOGI(TAG, "%02x_%02x_%02x_%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x", strSend[0],strSend[1],strSend[2],strSend[3],strSend[4],strSend[5],strSend[6],strSend[7],strSend[8],strSend[9],strSend[10],strSend[11],strSend[12],strSend[13],strSend[14],strSend[15],strSend[16],strSend[17],strSend[18],strSend[19],strSend[20],strSend[21],strSend[22],strSend[23],strSend[24],strSend[25]);
                 }
                 else ESP_LOGI(TAG, "Error ID.");
             }
-            //ESP_LOGI(TAG, "CRC1-2: %d%d",len,ix);
+            iLedStatus=0;
+            iTime=7;
+            gpio_set_level(LED_GPIO, 1);
         }
-        vTaskDelay(100 / portTICK_PERIOD_MS); // 100ms
+        vTaskDelay(50 / portTICK_PERIOD_MS); // 100ms
+
+        if(iWConnect[iId-1]>5){
+            iZ=4+(iId-1)*2;
+            strSend[iZ]=0xFF;
+            strSend[iZ+1]=0xFF;
+        }
+        
+        btState = gpio_get_level(SW_GPIO);
+        if(btState==1)
+        {
+            if(++cout1>20)  { 
+                en_senxor=1; 
+                cout1=0;
+            }
+        }
+        else cout1=0;
+
+        if(btState==0 && en_senxor==1)
+        {		
+            if(++cout2>50)  
+            {
+                en_senxor=0;
+                iLedStatus=0;
+                cout2=0;     
+                gpio_set_level(LED_GPIO, 1);
+                ESP_LOGI(TAG, "OFF");
+            }
+        }
+        else cout2=0;
+        
+        if (++iTime>10 && en_senxor==1)
+        {      
+            iTime=0;
+            if(iLedStatus==0){
+                iLedStatus=10;  
+                gpio_set_level(LED_GPIO, 0);
+            } 
+            else if(iLedStatus==1){
+                gpio_set_level(LED_GPIO, 1);
+            }
+        }
     }
     vTaskDelete(NULL);
 }
@@ -622,8 +683,8 @@ void app_main(void)
                         pdFALSE,
                         portMAX_DELAY);
 
-    xTaskCreatePinnedToCore(&main_task, "main_task", 1024 * 20, NULL, 5, NULL, 0);
-    xTaskCreatePinnedToCore(&echo_task, "echo_task", 1024 * 10, NULL, 10, NULL, 1);
+    xTaskCreatePinnedToCore(&main_task, "main_task" , 1024 * 20 , NULL, 5 , NULL, 0);
+    xTaskCreatePinnedToCore(&echo_task, "echo_task" , 1024 * 10 , NULL, 10, NULL, 1);
 
     vTaskDelete(NULL);     
 }
