@@ -47,7 +47,7 @@
 #define LED_GPIO   21
 #define SW_GPIO    4
 
-#define ACTIVE_ETHERNET             1
+#define ACTIVE_ETHERNET             0
 #define TAG                         "app_main"
 
 /* FreeRTOS event group to signal when we are connected*/
@@ -56,9 +56,8 @@ static char                         clientID[64];
 static char                         sub_topic[128];
 static esp_mqtt_client_handle_t     client = NULL;
 
-static uint8_t  strSend[26] ={'D','A','T','A',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}; //
+static uint8_t  strSend[22] ={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}; //
 static uint8_t  iWConnect[11]={0,0,0,0,0,0,0,0,0,0,0};
-static uint8_t iLedStatus=0,iTime=0;
 
 extern const uint8_t mqtt_ca_certificate_pem_start[]    asm("_binary_mqtt_ca_certificate_pem_start");
 extern const uint8_t http_certificate_pem_start[]       asm("_binary_http_certificate_pem_start");
@@ -278,6 +277,8 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         break;
     case MQTT_EVENT_DISCONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
+        xEventGroupClearBits(event_group, WIFI_CONNECTED_BIT);
+        xEventGroupSetBits(event_group, WIFI_FAIL_BIT);
         break;
 
     case MQTT_EVENT_SUBSCRIBED:
@@ -307,7 +308,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 
                 // TODO: dummy data
                 //float temperature = 30.13f;
-                ESP_LOGI(TAG, "%02x_%02x_%02x_%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x", strSend[0],strSend[1],strSend[2],strSend[3],strSend[4],strSend[5],strSend[6],strSend[7],strSend[8],strSend[9],strSend[10],strSend[11],strSend[12],strSend[13],strSend[14],strSend[15],strSend[16],strSend[17],strSend[18],strSend[19],strSend[20],strSend[21],strSend[22],strSend[23],strSend[24],strSend[25]);
+                ESP_LOGI(TAG, "%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x", strSend[0],strSend[1],strSend[2],strSend[3],strSend[4],strSend[5],strSend[6],strSend[7],strSend[8],strSend[9],strSend[10],strSend[11],strSend[12],strSend[13],strSend[14],strSend[15],strSend[16],strSend[17],strSend[18],strSend[19],strSend[20],strSend[21]);
                 uint16_t *data_raw = (uint16_t *)strSend;
 
                 sprintf(payload, "{\"Type\":\"Response\",\"clientID\":\"%s\",\"raw_data\":[%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d]}",
@@ -416,7 +417,7 @@ static void main_task(void *pvParameter)
                             .password                                   = "Device@12345",
                         },
                     },
-                    .network.disable_auto_reconnect                     = false
+                    .network.disable_auto_reconnect                     = true
                 };
 
                 client = esp_mqtt_client_init(&mqtt_cfg);
@@ -535,8 +536,8 @@ static void echo_task(void *arg)
             if(ix==len){
                 //DATAxx
                 //ESP_LOGI(TAG, "CRC OK");
-                iZ=4+(data[0]-1)*2;
-                if(iZ>3 && iZ<25)
+                iZ=(data[0]-1)*2;
+                if(iZ<22)
                 {
                     strSend[iZ]=data[4];
                     strSend[iZ+1]=data[3];
@@ -545,14 +546,12 @@ static void echo_task(void *arg)
                 }
                 else ESP_LOGI(TAG, "Error ID.");
             }
-            iLedStatus=0;
-            iTime=7;
             gpio_set_level(LED_GPIO, 1);
         }
-        vTaskDelay(50 / portTICK_PERIOD_MS); // 100ms
+        vTaskDelay(100 / portTICK_PERIOD_MS); // 100ms
 
         if(iWConnect[iId-1]>5){
-            iZ=4+(iId-1)*2;
+            iZ=(iId-1)*2;
             strSend[iZ]=0xFF;
             strSend[iZ+1]=0xFF;
         }
@@ -560,7 +559,7 @@ static void echo_task(void *arg)
         btState = gpio_get_level(SW_GPIO);
         if(btState==1)
         {
-            if(++cout1>20)  { 
+            if(++cout1>10)  { 
                 en_senxor=1; 
                 cout1=0;
             }
@@ -569,27 +568,20 @@ static void echo_task(void *arg)
 
         if(btState==0 && en_senxor==1)
         {		
-            if(++cout2>50)  
+            if(++cout2>30)  
             {
                 en_senxor=0;
-                iLedStatus=0;
                 cout2=0;     
                 gpio_set_level(LED_GPIO, 1);
-                ESP_LOGI(TAG, "OFF");
+                ESP_LOGI(TAG, "esp_restart.");
+                esp_restart();
             }
         }
         else cout2=0;
         
-        if (++iTime>10 && en_senxor==1)
+        if(en_senxor==1)
         {      
-            iTime=0;
-            if(iLedStatus==0){
-                iLedStatus=10;  
-                gpio_set_level(LED_GPIO, 0);
-            } 
-            else if(iLedStatus==1){
-                gpio_set_level(LED_GPIO, 1);
-            }
+            gpio_set_level(LED_GPIO, 0);
         }
     }
     vTaskDelete(NULL);
